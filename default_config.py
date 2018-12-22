@@ -5,10 +5,8 @@
 '''Description '''
 
 __author__ = 'shan weijia <shanweijia@jiaaocap.com>'
-__time__ = '2018/12/14 3:58 PM'
+__time__ = '2018/12/22 8:10 PM'
 
-from global_reference import app,db
+SQLALCHEMY_DATABASE_URI = "mysql://root:root@127.0.0.1:3306/test"  # 配置数据库连接地址
 
-if __name__ == '__main__':
-    db.create_all()
-    app.run()
+

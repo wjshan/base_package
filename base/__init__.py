@@ -5,10 +5,4 @@
 '''Description '''
 
 __author__ = 'shan weijia <shanweijia@jiaaocap.com>'
-__time__ = '2018/12/14 3:58 PM'
-
-from global_reference import app,db
-
-if __name__ == '__main__':
-    db.create_all()
-    app.run()
+__time__ = '2018/12/14 4:38 PM'

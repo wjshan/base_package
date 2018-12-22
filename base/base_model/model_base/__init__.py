@@ -8,10 +8,10 @@ __author__ = 'shan weijia <shanweijia@jiaaocap.com>'
 __time__ = '2018/11/12 8:40 AM'
 
 from global_reference import db
-from sqlalchemy.ext.declarative import AbstractConcreteBase, declared_attr, base
+from sqlalchemy.ext.declarative import AbstractConcreteBase, declared_attr, declarative_base
+Base = declarative_base()
 
-
-class TableBase(AbstractConcreteBase, base):
+class TableBase(AbstractConcreteBase, Base):
     _log_access = True  # 是否添加时间类字段
     _log_user = True  # 是否添加用户字段
 
@@ -43,7 +43,7 @@ class TableBase(AbstractConcreteBase, base):
 
     @declared_attr
     def __mapper_args__(cls):
-        return {'polymorphic_identity': cls.__name__, 'concrete': True} if cls.__name__ != "base_model" else {}
+        return {'polymorphic_identity': cls.__name__, 'concrete': True} if cls.__name__ != "TableBase" else {}
 
     def __init__(self, *args, **kwargs):
         self.create_user = kwargs.get("user_id")

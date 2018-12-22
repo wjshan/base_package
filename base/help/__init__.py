@@ -5,10 +5,7 @@
 '''Description '''
 
 __author__ = 'shan weijia <shanweijia@jiaaocap.com>'
-__time__ = '2018/12/14 3:58 PM'
+__time__ = '2018/12/17 9:21 AM'
 
-from global_reference import app,db
-
-if __name__ == '__main__':
-    db.create_all()
-    app.run()
+from .http_error_code import retrun_error
+from .token import get_token, TokenAuth

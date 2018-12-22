@@ -10,6 +10,7 @@ __time__ = '2018/11/9 4:02 PM'
 import os
 from flask import Flask, request
 import json
+
 # 实例化Flask类
 app = Flask(__name__)
 
@@ -37,110 +38,58 @@ app.config.from_mapping({
     "PROJECT_ROOT": os.path.abspath(os.path.dirname(os.path.dirname(__file__))),
     "LOG_FOLDER": os.path.join(PROJECT_ROOT, 'log'),
     "SECRET_KEY": os.urandom(24),
+    "SQLALCHEMY_TRACK_MODIFICATIONS": False
 })
 
+# 加载用户配置
+app.config.from_pyfile("default_config.py")
+
+
+def get_env(name, default=None):
+    if name in os.environ:
+        return os.environ[name]
+    elif name in app.config:
+        return app.config[name]
+    else:
+        return default
+
+
+# 初始化数据库
 from flask_sqlalchemy import SQLAlchemy
 
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqllit:///temp_db/test.db"  # 配置数据库连接地址
+# 将pymysql映射成MySQLdb
+from pymysql import install_as_MySQLdb
+
+install_as_MySQLdb()
+
 db = SQLAlchemy(app, session_options={"autocommit": False, "autoflush": False, })
 
-# celery 配置
-from celery import Celery, platforms
-from celery.utils.log import get_task_logger
-from kombu import Exchange, Queue
-from kombu.serialization import registry
-from datetime import datetime, date
-import dateutil.parser
+
+# 全局自定义错误类
+class HttpError(Exception):
+    def __init__(self, code, message):
+        self.code = code
+        self.message = message
+
+    def __str__(self):
+        return "{0}-{1}".format(self.code,self.message)
 
 
+import traceback
 
 
-
-class CJsonEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, datetime):
-            return {"val": obj.isoformat(), "_spec_type": "datetime"}
-        elif isinstance(obj, date):
-            return {"val": obj.isoformat(), "_spec_type": "date"}
-        else:
-            return json.JSONEncoder.default(self, obj)
+def module_load():
+    for user_module in _get_modules_path():
+        try:
+            __import__(user_module)
+        except ImportError:
+            traceback.print_exc()
+    return
 
 
-def date_time_hook(obj):
-    _spec_type = obj.get('_spec_type')
-    if not _spec_type:
-        return obj
-    if _spec_type in CONVERTERS:
-        return CONVERTERS[_spec_type](obj['val'])
-    else:
-        raise Exception('Unknown {}'.format(_spec_type))
+def _get_modules_path():
+    return ["base." + path for path in os.listdir("base") if
+            os.path.isdir("base/" + path) and ("." not in path)]
 
 
-CONVERTERS = {
-    'datetime': dateutil.parser.parse,
-    'date': dateutil.parser.parse,
-}
-
-
-
-
-
-def register_jsond():
-    def dumps(*args, **kwargs):
-        return json.dumps(*args, **dict(kwargs, cls=CJsonEncoder))
-
-    def loads(*args, **kwargs):
-        args = [x.decode() if isinstance(x, bytes) else x for x in args]
-        return json.loads(*args, **dict(kwargs, object_hook=date_time_hook))
-
-    registry.register('jsond', dumps, loads,
-                      content_type='application/json',
-                      content_encoding='utf-8')
-
-
-platforms.C_FORCE_ROOT = True
-register_jsond()
-celery = Celery(__name__)
-logger = get_task_logger(__name__)
-
-# if get_env("START_METHOD") == "heartbeat":
-#     queues = [Queue('olympus_heartbeat', Exchange('olympus_heartbeat'), routing_key='olympus_heartbeat',
-#                     consumer_arguments={'x-max-priority': 10}), ]
-# else:
-#     queues = [Queue('index_compute_server', Exchange('index_compute_server'), routing_key='index_compute_server',
-#                     consumer_arguments={'x-max-priority': 10}), ]
-queues = [Queue('heartbeat', Exchange('heartbeat'), routing_key='heartbeat',
-                    consumer_arguments={'x-max-priority': 10}), ]
-
-CELERY_TASK_SERIALIZER = 'jsond'
-CELERY_RESULT_SERIALIZER = 'jsond'
-CELERY_TASK_RESULT_EXPIRES = 30
-CELERY_ACCEPT_CONTENT = ["json", 'json']
-CELERY_TIMEZONE = 'Asia/Shanghai'
-CELERYD_FORCE_EXECV = True
-BROKER_TRANSPORT_OPTIONS = {'visibility_timeout': 24 * 60 * 60}
-CELERY_IGNORE_RESULT = False
-CELERYD_CONCURRENCY = 20  # 并发worker数
-CELERYD_TASK_SOFT_TIME_LIMIT = 60 * 60 * 24
-CELERYD_TASK_TIME_LIMIT = 60 * 60 * 24
-CELERYD_PREFETCH_MULTIPLIER = 1
-celery.conf.update({
-    "BROKER_HOST": "127.0.0.1",
-    "BROKER_PORT": "5672",
-    "BROKER_USER": "admin",
-    "BROKER_PASSWORD": "admin",
-    "BROKER_VHOST": "/",
-    "CELERY_RESULT_BACKEND": 'redis://{host}:{port}/{db}'.format(host="127.0.0.1",
-                                                                 port="6379",
-                                                                 db="3"),
-    "CELERY_TASK_SERIALIZER": CELERY_TASK_SERIALIZER,
-    "CELERYD_prefetch_multiplier": CELERYD_PREFETCH_MULTIPLIER,
-    "CELERY_RESULT_SERIALIZER": CELERY_RESULT_SERIALIZER,
-    "CELERY_TASK_RESULT_EXPIRES": CELERY_TASK_RESULT_EXPIRES,
-    "CELERY_ACCEPT_CONTENT": CELERY_ACCEPT_CONTENT,
-    "CELERY_TIMEZONE": CELERY_TIMEZONE,
-    "BROKER_TRANSPORT_OPTIONS": BROKER_TRANSPORT_OPTIONS,
-    "CELERY_IGNORE_RESULT": CELERY_IGNORE_RESULT,
-    "CELERYD_CONCURRENCY": CELERYD_CONCURRENCY,
-    "CELERY_QUEUES": queues
-})
+module_load()
