@@ -5,13 +5,13 @@
 '''Description '''
 
 __author__ = 'shan weijia <shanweijia@jiaaocap.com>'
-__time__ = '2018/12/14 4:46 PM'
+__time__ = '2018/12/24 9:12 AM'
 
 from flask import Blueprint
 from base.base_api import BaseApi
 from global_reference import app
 
-user_buleprint = Blueprint("user",__name__)
-user_api = BaseApi(user_buleprint)
-from . import user
-app.register_blueprint(user_buleprint,url_prefix="/user")
+admin_buleprint = Blueprint("admin",__name__)
+admin_api = BaseApi(admin_buleprint)
+from . import admin
+app.register_blueprint(admin_buleprint,url_prefix="/admin")
