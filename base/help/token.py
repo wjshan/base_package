@@ -28,9 +28,11 @@ def get_token(message, expires=None):
 
 
 class TokenAuth(Serializer):
-    def __init__(self, token_func=None):
+    def __init__(self, token_func=None, token_name=None, bind=True):
         super(TokenAuth, self).__init__(secret_key=get_env("SECRET_KEY"), salt=get_env("SALT"))
         self.token_func = token_func
+        self.token_name = token_name or "access_token"
+        self.bind = bind
 
     def loads_token(self, token):
         try:
@@ -50,7 +52,7 @@ class TokenAuth(Serializer):
         @wraps(func)
         def call(*args, **kwargs):
             if callable(self.token_func):
-                token = self.token_func("token")
+                token = self.token_func(self.token_name)
             else:
                 token = self.token_func
             if not token:
@@ -58,6 +60,9 @@ class TokenAuth(Serializer):
             payload = self.loads_token(token)
             if payload is None:
                 retrun_error(4005)
-            return func(*args, payload=payload, **kwargs)
+            if self.bind:
+                return func(*args, payload=payload, **kwargs)
+            else:
+                return func(*args, **kwargs)
 
         return call

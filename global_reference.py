@@ -37,7 +37,6 @@ app.config.from_mapping({
     "PROJECT": "app",
     "PROJECT_ROOT": os.path.abspath(os.path.dirname(os.path.dirname(__file__))),
     "LOG_FOLDER": os.path.join(PROJECT_ROOT, 'log'),
-    "SECRET_KEY": os.urandom(24),
     "SQLALCHEMY_TRACK_MODIFICATIONS": False
 })
 
@@ -52,6 +51,10 @@ def get_env(name, default=None):
         return app.config[name]
     else:
         return default
+
+# 设置跨域访问
+from flask_cors import CORS
+CORS(app, supports_credentials=True)
 
 
 # 初始化数据库
